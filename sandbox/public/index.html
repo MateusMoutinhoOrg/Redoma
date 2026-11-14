@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Redoma Links</title>
-<meta name="description" content="An experimental link shortener built with Redoma. Every link is kept in one of 1,296 small databases.">
+<meta name="description" content="An experimental link shortener built with Redoma: a test project for horizontal, scalable architectures, where links are spread over many small databases.">
 
 <style>
   :root {
@@ -52,9 +52,14 @@
   header .source { margin-left: auto; font-size: 0.95rem; }
 
   /* Headline and form */
-  h1 { margin: 3.5rem 0 1rem; font-size: clamp(2.1rem, 7vw, 3.4rem); line-height: 1.08; font-weight: 650; letter-spacing: -0.04em; text-wrap: balance; }
+  .eyebrow { margin: 3.5rem 0 0.9rem; color: var(--accent); font-size: 0.8rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+  h1 { margin: 0 0 1rem; font-size: clamp(2.1rem, 7vw, 3.4rem); line-height: 1.08; font-weight: 650; letter-spacing: -0.04em; text-wrap: balance; }
   h1 em { font-style: normal; color: var(--accent); }
-  .lead { max-width: 36rem; margin: 0 0 2rem; color: var(--muted); font-size: 1.1rem; text-wrap: pretty; }
+  .lead { max-width: 36rem; margin: 0 0 1.5rem; color: var(--muted); font-size: 1.1rem; text-wrap: pretty; }
+
+  /* The live count of redirects */
+  #stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; margin: 0 0 1.75rem; color: var(--muted); }
+  #stats b { color: var(--accent); font: 650 2.1rem/1 var(--mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
 
   form { display: flex; gap: 0.5rem; padding: 0.4rem; border: 1px solid var(--line); border-radius: 0.9rem; background: var(--card); box-shadow: 0 1px 2px #0000000d, 0 8px 24px #0000000d; }
   form:focus-within { border-color: var(--accent); }
@@ -115,12 +120,16 @@
 </header>
 
 <main>
-  <h1>Short links, kept in <em>1,296</em> small databases.</h1>
+  <p class="eyebrow">Experimental test project</p>
+  <h1>A link shortener that scales <em>horizontally</em>.</h1>
   <p class="lead">
-    Paste a long address and get a short one. This is an experimental project of
-    <a href="https://github.com/MateusMoutinhoOrg/Redoma">Redoma</a>, a TypeScript template for
-    Cloudflare Workers and Linux.
+    Redoma Links exists to test horizontal, scalable architectures: instead of one big database,
+    links are spread over many small ones. It is an experiment of
+    <a href="https://github.com/MateusMoutinhoOrg/Redoma">Redoma</a>, not a production service.
+    Paste a long address to try it.
   </p>
+
+  <p id="stats" aria-live="polite"><b id="redirects">…</b> <span id="redirects-label">redirects served so far</span></p>
 
   <form>
     <input name="url" aria-label="Long address" placeholder="https://example.com/a/very/long/address" autocomplete="off" required autofocus>
@@ -138,11 +147,12 @@
         <li><strong>A code is drawn</strong> Six random letters and digits, like <code>k3x9ab</code>. There is no counter to wait for.</li>
         <li><strong>Two characters pick the database</strong> <code>k3</code> means the link is kept in <code>links-k3</code>. A database is created the first time it is needed.</li>
         <li><strong>One query opens the link</strong> A visit asks that one small database, however many links exist in the others.</li>
+        <li><strong>One database counts the visits</strong> Every redirect adds one to <code>redirect-count</code>. It is the only thing all visits share, so a link still opens if the count cannot be saved.</li>
       </ol>
     </section>
     <figure>
       <div id="map" aria-hidden="true"></div>
-      <figcaption id="caption">Each square is a database. The ones that keep your links light up.</figcaption>
+      <figcaption id="caption">Each square is a database that can exist; one is created only when a link needs it. The ones that keep your links light up.</figcaption>
     </figure>
   </div>
 </main>
@@ -204,7 +214,7 @@
     card.hidden = !newest;
     if (newest) {
       const database = el("code", {}, `links-${newest.code.slice(0, 2)}`);
-      card.replaceChildren(shortLink(newest.code), copyButton(newest.code), el("p", {}, "Kept in database ", database, ", one of 1,296."));
+      card.replaceChildren(shortLink(newest.code), copyButton(newest.code), el("p", {}, "Kept in database ", database, "."));
     }
 
     document.querySelector("#earlier").replaceChildren(
@@ -235,5 +245,26 @@
     show();
   };
 
+  /** Shows how many redirects the server has counted. Without an answer, the line is hidden. */
+  async function showRedirects() {
+    const stats = document.querySelector("#stats");
+    try {
+      const response = await fetch("/api/stats");
+      if (!response.ok) throw new Error(`The count answered ${response.status}`);
+      const { redirects } = await response.json();
+      document.querySelector("#redirects").textContent = redirects.toLocaleString("en-US");
+      document.querySelector("#redirects-label").textContent = `${redirects === 1 ? "redirect" : "redirects"} served so far`;
+      stats.hidden = false;
+    } catch {
+      stats.hidden = true;
+    }
+  }
+
+  // Short links open in a new tab: count again when the visitor comes back to this one.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) showRedirects();
+  });
+
   show();
+  showRedirects();
 </script>

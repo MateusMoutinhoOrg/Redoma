@@ -1,12 +1,18 @@
 import type { Deps } from "../deps/index.ts";
 
 // The example app: a link shortener that never outgrows its database, because
-// it has 1,296 of them.
+// its links are spread over many small ones (up to 36 × 36 of them).
 //
 // A short code looks like "k3x9ab". Its first two characters name the database
 // that keeps it ("links-k3"), so opening a link is always one query to one
-// small database, however many links exist. Nothing is shared between
-// databases: no counter, no index, no list of them.
+// small database, however many links exist. The link databases share nothing:
+// no index, no list of them.
+//
+// One thing is shared, on purpose: a single database, "redirect-count", counts
+// every redirect, so the page can show a real number. Every visit writes to
+// it, which makes it the one part that does not scale sideways. A redirect
+// therefore never depends on it: if the count cannot be saved, the visitor is
+// redirected anyway.
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz0123456789";
 const LINKS_PER_HOUR = 20;
@@ -31,6 +37,18 @@ export default function main({ server, databases }: Deps) {
     );
     return row.links;
   }
+
+  /** The one database that counts redirects. It holds a single row. */
+  function redirectCount() {
+    return databases.open("redirect-count", [
+      "CREATE TABLE redirects (id INTEGER PRIMARY KEY CHECK (id = 1), total INTEGER NOT NULL)",
+    ]);
+  }
+
+  server.route("GET", "/api/stats", async () => {
+    const [row] = await redirectCount().query<{ total: number }>("SELECT total FROM redirects WHERE id = 1");
+    return Response.json({ redirects: row?.total ?? 0 }, { headers: { "Cache-Control": "no-store" } });
+  });
 
   server.route("POST", "/api/links", async (request) => {
     const body = (await request.json().catch(() => null)) as { url?: unknown } | null;
@@ -59,7 +77,13 @@ export default function main({ server, databases }: Deps) {
   server.route("GET", "/:code", async (_request, { code }) => {
     if (!/^[a-z0-9]{6}$/.test(code)) return new Response("Link not found.", { status: 404 });
     const [link] = await databaseOf(code).query<{ url: string }>("SELECT url FROM links WHERE code = ?", code);
-    return link ? Response.redirect(link.url, 302) : new Response("Link not found.", { status: 404 });
+    if (!link) return new Response("Link not found.", { status: 404 });
+
+    // Counting must never cost a visitor their redirect, so a failure is only logged.
+    await redirectCount()
+      .query("INSERT INTO redirects (id, total) VALUES (1, 1) ON CONFLICT (id) DO UPDATE SET total = total + 1")
+      .catch((error) => console.error("Could not count a redirect:", error));
+    return Response.redirect(link.url, 302);
   });
 }
 

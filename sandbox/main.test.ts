@@ -22,6 +22,20 @@ export default function ({ test, assert }: Tests) {
     assert.equal((await app.fetch("/not-a-code")).status, 404);
   });
 
+  test("counts every redirect, and only redirects", async (app) => {
+    const redirects = async () => ((await (await app.fetch("/api/stats")).json()) as { redirects: number }).redirects;
+    assert.equal(await redirects(), 0);
+
+    const { code } = (await (await shorten(app, "https://example.com/")).json()) as { code: string };
+    assert.equal(await redirects(), 0, "making a link is not a redirect");
+
+    for (let i = 0; i < 3; i++) assert.equal((await app.fetch(`/${code}`)).status, 302);
+    assert.equal(await redirects(), 3);
+
+    await app.fetch("/abc123");
+    assert.equal(await redirects(), 3, "a link that does not exist is not counted");
+  });
+
   test("accepts only web addresses", async (app) => {
     for (const url of ["javascript:alert(1)", "ftp://example.com", "example", "", null]) {
       assert.equal((await shorten(app, url)).status, 400, `rejects ${JSON.stringify(url)}`);
