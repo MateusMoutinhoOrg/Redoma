@@ -5,7 +5,7 @@
 import { fail, ok, preflight, say } from "../engine/tools/cli.ts";
 import { projectName } from "../engine/tools/project.ts";
 import { firstFreePort } from "../engine/tools/runtime.ts";
-import { enableBootStart, installService, installedState, requireSystemd, stopService } from "../engine/tools/service.ts";
+import { enableBootStart, installService, installedState, requireSystemd, serviceRunning } from "../engine/tools/service.ts";
 
 preflight();
 requireSystemd();
@@ -18,9 +18,14 @@ if (!match || from < 1 || to > 65535 || from > to) {
   fail(`"${spec}" is not a port or a range.`, "Examples: npm run service:install 8080   or   npm run service:install 3000:3100");
 }
 
-// Our own running service must not make its port look taken.
-if (installedState(name).service) stopService(name);
-const port = await firstFreePort(from, to);
+// Our own running service must not make its port look taken. It keeps running
+// while we look, so a request that is refused below takes nothing down.
+const current = installedState(name);
+const own = current.service && serviceRunning(name) ? current.port : undefined;
+let port: number | undefined;
+for (let candidate = from; candidate <= to && port === undefined; candidate++) {
+  if (candidate === own || (await firstFreePort(candidate, candidate)) !== undefined) port = candidate;
+}
 if (port === undefined) {
   fail(
     from === to ? `Port ${from} is already in use.` : `No free port between ${from} and ${to}.`,
