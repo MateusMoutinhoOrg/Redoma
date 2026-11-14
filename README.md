@@ -178,7 +178,7 @@ The same app runs on a Linux machine with systemd, with all its data on that mac
 npm run service:install
 ```
 
-It installs a service on port 3000 that restarts on failure and starts on boot. Give a port (`npm run service:install 8080`) or a range to take the first free port in it (`npm run service:install 3000:3100`).
+It installs a service on port 3000 that restarts on failure and starts on boot. Give a port (`npm run service:install 8080`) or a range to take the first free port in it (`npm run service:install 3000:3100`). Run it again to move the service to another port. If the port you ask for is taken, the command says so and the running service is left as it was.
 
 ```bash
 npm run service:status
@@ -200,7 +200,10 @@ npm run watcher:remove
 
 Things to know:
 
+- **It comes back by itself.** If the app crashes, systemd starts it again within seconds. After a reboot or a power cut it starts again with its data, without anyone logging in (if `service:install` printed an administrator command, run it once for this to hold).
+- **One copy, one port.** A range picks one free port; it does not start a copy of the app on each port. Two copies writing the same `.data/` would corrupt it, so the engine refuses to start a second one. To answer on more ports or domains, point a reverse proxy at the one port.
 - No `sudo` is involved. If you run a command with `sudo` by mistake it refuses, because root-owned files in the project would break every later command. To keep the service running after you log out, one administrator command may be needed once; `service:install` prints it if so.
+- On a server where you log in as root and the project belongs to root, the service is installed for the whole system and the app runs as root. A normal user is the safer choice.
 - The service listens on all network interfaces over plain HTTP. For HTTPS, put a reverse proxy (Caddy, nginx) or a Cloudflare Tunnel in front of it. A proxy on the same machine is trusted to report the visitor's address and `https`.
 - Secrets are not in the repository. Set them on the server too.
 - For a private repository, the server needs its own access to it (a deploy key) for the watcher to pull.
