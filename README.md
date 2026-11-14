@@ -12,7 +12,6 @@ A TypeScript template for Cloudflare Workers and Linux, built to be driven by AI
 <a href="LICENSE"><img src="engine/assets/badge-license.svg" alt="license: MIT" height="24"></a>
 <a href="package.json"><img src="engine/assets/badge-node.svg" alt="node: 22.18 or newer" height="24"></a>
 <a href="wrangler.jsonc"><img src="engine/assets/badge-runtime.svg" alt="runtime: Cloudflare Workers" height="24"></a>
-<a href="tsconfig.json"><img src="engine/assets/badge-language.svg" alt="language: TypeScript only" height="24"></a>
 <a href="package.json"><img src="engine/assets/badge-dependencies.svg" alt="runtime dependencies: 0" height="24"></a>
 
 </div>
