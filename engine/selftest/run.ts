@@ -90,7 +90,10 @@ try {
   await stop(runner.child);
 
   writeFileSync(join(project, ".dev.vars"), "API_KEY='pa$$w0rd-${HOME}'\n");
+  // What a power cut leaves: a lock whose process number now belongs to an unrelated, living process (here, this test).
+  writeFileSync(join(project, ".data/.lock"), `${process.pid} service an-earlier-boot:1`);
   runner = await start(["engine/runner.ts", String(port)], /Serving on port/);
+  expect(readFileSync(join(project, ".data/.lock"), "utf8").startsWith(`${runner.child.pid} service `), "a lock left behind by a power cut does not stop the next start");
   expect((await json(`${base}/events`))[0]?.kind === "kept", "database rows survive a restart");
   expect((await (await fetch(`${base}/blob/kept.txt`)).text()) === "still here", "files survive a restart");
   expect((await json(`${base}/secret`)).length === 16, "a secret with $ characters reaches the app unchanged");
