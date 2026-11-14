@@ -236,12 +236,22 @@ function freePort(): Promise<number> {
   });
 }
 
-/** Two runtimes on the same data would corrupt it: one owner per data directory. */
+/**
+ * Two runtimes on the same data would corrupt it: one owner per data directory.
+ *
+ * A power cut or a kill leaves the lock file behind, and after a reboot the
+ * owner's process number usually belongs to some unrelated process. So the
+ * lock also records which process it was (see `identity`), and a lock whose
+ * owner is gone never stops the app from starting.
+ */
 function lock(dataDir: string, mode: string): () => void {
   const path = join(dataDir, ".lock");
   try {
-    const [pid = "", owner = "another process"] = readFileSync(path, "utf8").split(" ");
-    if (Number(pid) !== process.pid && alive(Number(pid))) {
+    const [pid = "", owner = "another process", recorded = ""] = readFileSync(path, "utf8").trim().split(" ");
+    const now = identity(Number(pid));
+    // Without both identities (a lock from an older version, not Linux), the process number is all there is.
+    const sameProcess = recorded === "" || now === "" || recorded === now;
+    if (Number(pid) !== process.pid && alive(Number(pid)) && sameProcess) {
       throw new StartError(
         `The app's data in .data/ is in use by ${owner === "service" ? "the Linux service" : "another `npm run " + owner + "`"} (process ${pid}). ` +
           "Stop it first: two copies writing the same data would corrupt it.",
@@ -250,8 +260,24 @@ function lock(dataDir: string, mode: string): () => void {
   } catch (error) {
     if (error instanceof StartError) throw error;
   }
-  writeFileSync(path, `${process.pid} ${mode}`);
+  writeFileSync(path, `${process.pid} ${mode} ${identity(process.pid)}`);
   return () => rmSync(path, { force: true });
+}
+
+/**
+ * What tells a process from a later one that got the same number: the boot it
+ * belongs to and the moment it started. Linux only; "" when it cannot be read.
+ */
+function identity(pid: number): string {
+  try {
+    const boot = readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim();
+    // The start time is field 22 of /proc/PID/stat. Field 2, the command name, may contain spaces: count from its closing ")".
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    const started = stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19];
+    return started ? `${boot}:${started}` : "";
+  } catch {
+    return "";
+  }
 }
 
 function alive(pid: number): boolean {
