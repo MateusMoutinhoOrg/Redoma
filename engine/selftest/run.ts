@@ -107,7 +107,7 @@ try {
   let fired = await fetch(`http://127.0.0.1:${devPort}/cdn-cgi/local/scheduled?time=${at}`);
   if (fired.status === 404) fired = await fetch(`http://127.0.0.1:${devPort}/cdn-cgi/handler/scheduled?time=${at}`);
   const events = await json(`http://127.0.0.1:${devPort}/events`);
-  expect(fired.ok && events.some((event: { kind: string }) => event.kind === "nightly"), "a scheduled event reaches the Worker's scheduled handler and runs the due job", JSON.stringify(events));
+  expect(fired.ok && events.some((event: { kind: string }) => event.kind.startsWith("nightly 2026-01-05T03:00")), "a scheduled event reaches the Worker's scheduled handler and runs the due job", JSON.stringify(events));
   await stop(dev.child);
 
   console.log("4. restrict mode");

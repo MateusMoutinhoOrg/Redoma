@@ -1,9 +1,10 @@
 /** HTTP routes. A file in `sandbox/public/` wins over a route with the same path. */
 export interface Server {
   /**
-   * Answer `method` requests to `path`. A `:name` segment is a parameter; a final
-   * `*` matches the rest. The first match registered wins. No match is a 404
-   * (`sandbox/public/404.html` if it exists).
+   * Answer `method` requests to `path`. A `:name` segment is a parameter
+   * (percent-decoded, so it may contain `/`); a final `*` matches the rest. The
+   * first match registered wins. No match is a 404 (`sandbox/public/404.html`
+   * if it exists).
    * @example
    * server.route("GET", "/api/users/:id", async (request, { id }) => {
    *   const page = new URL(request.url).searchParams.get("page") ?? "1";

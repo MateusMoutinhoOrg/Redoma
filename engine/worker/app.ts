@@ -86,7 +86,7 @@ export function createEngine(main: unknown) {
         },
       },
       cron: {
-        schedule(expression: string, handler: () => void | Promise<void>): void {
+        schedule(expression: string, handler: (time: Date) => void | Promise<void>): void {
           if (typeof handler !== "function") throw new TypeError(`cron.schedule("${expression}"): the handler must be a function.`);
           target.jobs.push({ expression, matches: parseCron(expression), handler });
         },
@@ -167,7 +167,7 @@ async function runDue(app: Instance, time: Date, scope: string): Promise<{ ran: 
     due.map(async (job) => {
       const started = Date.now();
       try {
-        await job.handler();
+        await job.handler(minute);
         if (scope === "") console.log(`cron "${job.expression}" ran in ${Date.now() - started} ms`);
       } catch (error) {
         console.error(`${tag(scope)}cron "${job.expression}" failed:`, error);

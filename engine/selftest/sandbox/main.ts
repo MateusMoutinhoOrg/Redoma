@@ -79,8 +79,8 @@ export default function main({ server, http, databases, files, secrets, cron }: 
   });
 
   // cron
-  cron.schedule("0 3 * * *", async () => {
-    await db.query("INSERT INTO events (kind) VALUES ('nightly')");
+  cron.schedule("0 3 * * *", async (time) => {
+    await db.query("INSERT INTO events (kind) VALUES (?)", `nightly ${time.toISOString()}`);
   });
   cron.schedule("*/15 * * * 1-5", async () => {
     await db.query("INSERT INTO events (kind) VALUES ('weekday-quarter')");

@@ -1,7 +1,9 @@
 /**
  * Tests are `*.test.ts` files next to the code in `sandbox/`; `npm run test`
  * runs them against the real local runtime. A test file default-exports a
- * function that takes `Tests`: see `sandbox/main.test.ts`.
+ * function that takes `Tests`: see `sandbox/main.test.ts`. Test files run in
+ * Node, apart from the app: they reach it only through `app`, and may import
+ * other sandbox files to test plain functions.
  */
 export interface Tests {
   /** Each test gets its own app with empty databases and files. */
@@ -30,8 +32,9 @@ export interface App {
   fetch(path: string, init?: RequestInit): Promise<Response>;
   /**
    * Run the cron jobs due at `time` and wait for them. Rejects if one throws.
+   * Jobs receive `time`; the real clock does not move.
    * @example
-   * await app.runCron("2026-01-01T03:00:00Z"); // runs the "0 3 * * *" jobs
+   * await app.runCron("2030-01-01T03:00:00Z"); // "0 3 * * *" jobs see the year 2030
    */
   runCron(time: string | Date): Promise<void>;
 }

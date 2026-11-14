@@ -107,7 +107,7 @@ export default function ({ test, assert }: Tests) {
 
   test("cron: jobs run when their expression matches, and only then", async (app) => {
     await app.runCron("2026-01-05T03:00:00Z"); // a Monday, 03:00: "0 3 * * *" and "*/15 * * * 1-5"
-    assert.equal(((await (await app.fetch("/events")).json()) as { kind: string }[]).map((event) => event.kind), ["nightly", "weekday-quarter"]);
+    assert.equal(((await (await app.fetch("/events")).json()) as { kind: string }[]).map((event) => event.kind), ["nightly 2026-01-05T03:00:00.000Z", "weekday-quarter"]);
     await app.runCron("2026-01-04T04:20:00Z"); // a Sunday, 04:20: nothing is due
     assert.equal(((await (await app.fetch("/events")).json()) as unknown[]).length, 2);
     await app.runCron(new Date("2026-01-06T10:45:30Z")); // a Tuesday, 10:45

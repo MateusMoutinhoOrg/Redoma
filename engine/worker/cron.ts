@@ -4,7 +4,7 @@
 export interface Job {
   expression: string;
   matches: (time: Date) => boolean;
-  handler: () => void | Promise<void>;
+  handler: (time: Date) => void | Promise<void>;
 }
 
 interface Field {

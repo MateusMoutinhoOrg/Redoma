@@ -4,7 +4,7 @@ A TypeScript web server for Cloudflare Workers and Linux. The app lives in a san
 
 ## Map
 
-- `sandbox/` is the app: `main.ts` (entry point), `public/` (static frontend), `*.test.ts` (tests).
+- `sandbox/` is the app: `main.ts` (entry point), any modules you add, `public/` (static frontend), `*.test.ts` (tests).
 - `deps/` is the contract: types and documentation for everything the app can use. No logic.
 - `engine/` implements `deps/` and runs the app. `scripts/` holds the `npm run` commands.
 
