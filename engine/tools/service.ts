@@ -123,8 +123,8 @@ export function removeWatcher(name: string): boolean {
   return remove(watcherUnit(name));
 }
 
-export function stopService(name: string): void {
-  systemctl("stop", serviceUnit(name));
+export function serviceRunning(name: string): boolean {
+  return systemctl("is-active", serviceUnit(name)).stdout.trim() === "active";
 }
 
 export function restartService(name: string): boolean {
