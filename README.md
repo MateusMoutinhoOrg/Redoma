@@ -39,6 +39,10 @@ A TypeScript template for Cloudflare Workers and Linux, built to be driven by AI
 </p>
 <!-- /redoma:header -->
 
+<!-- redoma:project -->
+<!-- This block is yours: describe your project and link its docs here. `npm run update` replaces the rest of this file and keeps what is between these two markers. -->
+<!-- /redoma:project -->
+
 ## Quickstart
 
 You need [Node.js](https://nodejs.org) 22.18 or newer. Nothing else.
@@ -168,7 +172,7 @@ npm run secret remove NAME
 npm run update
 ```
 
-It downloads the latest version of this template and replaces `engine/`, `deps/`, `scripts/` and the root files the template owns (`README.md`, `AGENTS.md`, `CLAUDE.md`, `tsconfig.json`, `.gitignore`; `package.json` is merged). It never touches `sandbox/`. It refuses to run while those files have uncommitted changes, shows what will change, asks you to confirm, and then tells you whether your app still passes. Run it yourself; agents are told not to.
+It downloads the latest version of this template and replaces `engine/`, `deps/`, `scripts/` and the root files the template owns (`README.md`, `AGENTS.md`, `CLAUDE.md`, `tsconfig.json`, `.gitignore`; `package.json` is merged). In `README.md` it keeps what you wrote between the `redoma:project` markers, right under the title; the rest of the file is the template's manual and is replaced. It never touches `sandbox/`. It refuses to run while those files have uncommitted changes, shows what will change, asks you to confirm, and then tells you whether your app still passes. Run it yourself; agents are told not to.
 
 ### 8. Run it on your own Linux server
 

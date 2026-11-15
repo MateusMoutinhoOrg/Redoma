@@ -7,7 +7,11 @@
 // folder and those paths are copied over. It runs in two steps. The first, in
 // the code you have today, copies the folders. The second runs from the code
 // that was just copied in, so a new version decides how its own files land.
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+//
+// README.md is the one root file both sides write: the template owns the
+// manual, the project owns the block between the two `redoma:project` markers.
+// The update brings the new manual and puts the project's block back in it.
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ROOT, fail, ok, run, say } from "./cli.ts";
@@ -16,9 +20,13 @@ import { applyName } from "./rename.ts";
 import { RECORD, writeAgentRules, writeRecord } from "./restrict.ts";
 
 const FOLDERS = ["engine", "deps", "scripts"];
-/** Root files replaced as they are. package.json is merged and wrangler.jsonc regenerated. */
+/** Root files replaced as they are, except the project's block of README.md. package.json is merged and wrangler.jsonc regenerated. */
 const ROOT_FILES = ["AGENTS.md", "CLAUDE.md", "README.md", "tsconfig.json", ".gitignore"];
 const WATCHED = [...FOLDERS, ...ROOT_FILES, "package.json", "package-lock.json", "wrangler.jsonc"];
+
+const HEADER_END = "<!-- /redoma:header -->";
+const PROJECT_START = "<!-- redoma:project -->";
+const PROJECT_END = "<!-- /redoma:project -->";
 
 export function undoHint(): string {
   return `To undo the update: git checkout -- ${WATCHED.join(" ")} && git clean -fd ${FOLDERS.join(" ")}`;
@@ -85,11 +93,30 @@ export function changes(template: string): string[] {
   return lines.sort((a, b) => a.slice(2).localeCompare(b.slice(2)));
 }
 
-/** A file's text without its name-carrying header, for comparing a renamed copy with the template. */
+/** A file's text without its name-carrying header and without the project's own block, for comparing a project's copy with the template. */
 function body(text: string): string {
-  const end = text.indexOf("<!-- /redoma:header -->");
+  const block = projectBlock(text);
+  if (block !== null) text = text.replace(block, () => "");
+  const end = text.indexOf(HEADER_END);
   if (end >= 0) return text.slice(end);
   return text.startsWith("# ") ? text.slice(text.indexOf("\n")) : text;
+}
+
+/** The part of README.md that belongs to the project, markers included, or null if the file has none. */
+export function projectBlock(text: string): string | null {
+  const start = text.indexOf(PROJECT_START);
+  const end = text.indexOf(PROJECT_END);
+  return start >= 0 && end > start ? text.slice(start, end + PROJECT_END.length) : null;
+}
+
+/** `text` with `block` as its project block. A README that has no block yet gets it right after the header. */
+export function withProjectBlock(text: string, block: string): string {
+  const current = projectBlock(text);
+  if (current !== null) return text.replace(current, () => block);
+  const header = text.indexOf(HEADER_END);
+  if (header < 0) return `${block}\n\n${text}`;
+  const at = header + HEADER_END.length;
+  return `${text.slice(0, at)}\n\n${block}${text.slice(at)}`;
 }
 
 /** Step one: swap the three folders. */
@@ -116,9 +143,13 @@ function mergePackage(mine: PackageJson, theirs: PackageJson): PackageJson {
 export async function finishUpdate(template: string, changed: number): Promise<void> {
   const name = projectName();
   const restricted = isRestricted();
+  const readme = join(ROOT, "README.md");
+  const kept = existsSync(readme) ? projectBlock(readFileSync(readme, "utf8")) : null;
   for (const file of ROOT_FILES) {
     if (existsSync(join(template, file))) cpSync(join(template, file), join(ROOT, file));
   }
+  // The new README arrives with an empty project block: put back what the project had written in it.
+  if (kept !== null && existsSync(readme)) writeFileSync(readme, withProjectBlock(readFileSync(readme, "utf8"), kept));
   writePackage(mergePackage(readPackage(), readPackage(join(template, "package.json"))));
   rmSync(template, { recursive: true, force: true });
 
