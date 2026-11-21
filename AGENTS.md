@@ -12,7 +12,7 @@ A TypeScript web server for Cloudflare Workers and Linux. The app lives in a san
 
 1. `deps/index.ts`, then the `deps/` file for the capability you need. Its comments are the API documentation.
 2. `sandbox/`, to see what the app already does.
-3. `README.md`, only for questions about commands.
+3. `REDOMA.md`, only for questions about commands.
 
 Open a file in `engine/` only when those did not answer the question, and then only the one file you need. The engine is implementation detail: reading it spends tokens and changes nothing about what the sandbox can do.
 

@@ -1,6 +1,6 @@
 // npm run rename NAME
 // Rename the project everywhere it is named: package.json, the Worker
-// (wrangler.jsonc), README.md and AGENTS.md, and the systemd units if the
+// (wrangler.jsonc) and AGENTS.md, and the systemd units if the
 // Linux service is installed. Run it once, right after creating your
 // repository from the template.
 import { existsSync } from "node:fs";
